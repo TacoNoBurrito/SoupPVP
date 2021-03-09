@@ -5,6 +5,7 @@ use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\event\inventory\InventoryPickupItemEvent;
 use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerExhaustEvent;
@@ -20,6 +21,7 @@ use pocketmine\item\Bowl;
 use pocketmine\item\Item;
 use pocketmine\item\ItemIds;
 use pocketmine\item\MushroomStew;
+use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
@@ -47,6 +49,7 @@ class EventListener implements Listener {
 
 
 	public function onData(DataPacketReceiveEvent $event) : void {
+		$packet = $event->getPacket();
 		if ($event->getPacket() instanceof LoginPacket) {
 			switch ($event->getPacket()->clientData["DeviceOS"]) {
 				case 10:
@@ -66,6 +69,17 @@ class EventListener implements Listener {
 					break;
 				default:
 					$this->plugin->os[$event->getPacket()->username] = "win10";
+			}
+		} else {
+			if ($packet instanceof InventoryTransactionPacket) {
+				$transactionType = $packet->transactionType;
+				if ($transactionType === InventoryTransactionPacket::TYPE_USE_ITEM_ON_ENTITY) {
+					if ($this->plugin->isInArray($event->getPlayer())) {
+						$this->plugin->addClick($event->getPlayer());
+					} else {
+						$this->plugin->addToArray($event->getPlayer());
+					}
+				}
 			}
 		}
 	}
@@ -90,11 +104,7 @@ class EventListener implements Listener {
 				$this->plugin->purchasedata->set($event->getPlayer()->getName(), ["ninja" => false, "tank" => false]);
 				$this->plugin->purchasedata->save();
 			}
-			$this->plugin->abilitydata->set($event->getPlayer()->getName(), [
-				"monster-purchased" => false,
-				"monster-level" => 0
-			]);
-			$this->plugin->abilitydata->save();
+			$this->plugin::getUtils()->quickCheck($event->getPlayer());
 		} else {
 			$event->getPlayer()->kick("You May Only Join Through The Hub:\nHUB.HydroMC.TK Default Port.", false);
 		}
@@ -165,6 +175,7 @@ class EventListener implements Listener {
 		unset($this->plugin->lasthit[$event->getPlayer()->getName()]);
 		unset($this->plugin->classes[$event->getPlayer()->getName()]);
 		unset($this->plugin->os[$event->getPlayer()->getName()]);
+		$this->plugin->removeFromArray($event->getPlayer());
 	}
 
 	/**
@@ -231,6 +242,8 @@ class EventListener implements Listener {
 				// TODO: Find a decent reach limit for pvp.
 				if ($this->plugin->classes[$event->getEntity()->getName()] == "idling"or$this->plugin->classes[$event->getDamager()->getName()] == "idling") $event->setCancelled(true);
 				if ($event->getFinalDamage() >= $event->getEntity()->getHealth()) {
+					$this->plugin::getPerkManager()->checkPerksAfterKill($event->getDamager());
+					$event->getDamager()->getLevel()->dropItem(new Vector3($event->getEntity()->getX(),$event->getEntity()->getY(),$event->getEntity()->getZ()), Item::get(ItemIds::MUSHROOM_STEW,0,32));
 					$this->plugin::getUtils()->handleKillStreak($event->getDamager());
 					$event->setCancelled(true);
 					$event->getEntity()->setHealth(20);
@@ -249,6 +262,25 @@ class EventListener implements Listener {
 					$this->plugin->playerdata->save();
 					$this->plugin->playerdata->setNested($event->getEntity()->getName().".killstreak", 0);
 					$this->plugin->playerdata->save();
+				} else {
+					if ($this->plugin->getConfig()->get("ac-enabled") == true) {
+						$player = $event->getEntity();
+						$damager = $event->getDamager();
+						if ($player instanceof Player and $damager instanceof Player) {
+							if ($player->distance($damager) > $this->plugin->getConfig()->get("reach-ban")) {
+								if ($damager->getPing() > 120) {
+									$this->plugin->sendMessageToStaff("§cAC: §a" . $damager->getName() . " Is Possible Using Reach Hacks, Please Check Them Out. (may be a false-positive, their current ping is equal-to or over 120!)");
+									return;
+								}
+								$damager->kick("§cYou Have Been Banned Forever For Reach Cheats.", false);
+								$damager->setBanned(true);
+							} else {
+								if ($player->distance($damager) >= $this->plugin->getConfig()->get("reach-warn")) {
+									$this->plugin->sendMessageToStaff("§cAC: §a" . $damager->getName() . " Is Possible Using Reach Hacks, Please Check Them Out.");
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -305,6 +337,10 @@ class EventListener implements Listener {
 					$this->plugin::getUtils()->quickCheck($event->getPlayer());
 					$this->plugin::getUiManager()->openUi($event->getPlayer(), "classes");
 					break;
+				case "§r§fOpen Perks":
+					$this->plugin::getUtils()->quickCheck($event->getPlayer());
+					$this->plugin::getUiManager()->openUi($event->getPlayer(), "perks");
+					break;
 			}
 			$this->plugin->waitingcd[$event->getPlayer()->getName()] = time();
 		}
@@ -317,6 +353,15 @@ class EventListener implements Listener {
 	public function onRespawn(PlayerRespawnEvent $event) : void {
 		$event->getPlayer()->teleport($event->getPlayer()->getLevel()->getSafeSpawn());
 		$this->plugin::getClassManager()->setIdlingClass($event->getPlayer());
+	}
+
+	public function onPickup(InventoryPickupItemEvent $event) : void {
+		$item = $event->getItem();
+		if ($item->getId() == ItemIds::MUSHROOM_STEW) {
+			return;
+		} else {
+			$event->setCancelled(true);
+		}
 	}
 
 

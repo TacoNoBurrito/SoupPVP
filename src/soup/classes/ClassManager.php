@@ -18,6 +18,7 @@ class ClassManager {
 		$player->getInventory()->clearAll();
 		$player->getArmorInventory()->clearAll();
 		$player->getInventory()->setItem(4, Item::get(ItemIds::NETHER_STAR)->setCustomName("§r§fClaim Last Kit"));
+		$player->getInventory()->setItem(1, Item::get(ItemIds::DYE, 5)->setCustomName("§r§fOpen Perks"));
 		$player->getInventory()->setItem(0, Item::get(ItemIds::EMERALD)->setCustomName("§r§fOpen Shop"));
 	}
 	public function setPvpClass(Player $player) {

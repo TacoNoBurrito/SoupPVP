@@ -35,7 +35,7 @@ class Utilities {
 		/**
 		 * This is the check for purchases in the abilities part
 		 */
-		if (!$this->plugin->abilitydata->exists($player->getName())) {
+		if (empty($this->plugin->abilitydata->get($player->getName())["monster-level"])) {
 			$this->plugin->abilitydata->set($player->getName(), [
 				"monster-purchased" => false,
 				"monster-level" => 0

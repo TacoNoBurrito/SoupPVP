@@ -65,4 +65,26 @@ class InventoryUIs {
 		});
 		$menu->send($player, "Classes Menu");
 	}
+
+	public function openPerkShop($player) {
+		$menu = InvMenu::create(InvMenu::TYPE_CHEST);
+		$inventory = $menu->getInventory();
+		for ($i=0;$i<27;$i++) {
+			$inventory->setItem($i, Item::get(ItemIds::STAINED_GLASS, 7));
+		}
+		$inventory->setItem(10, Item::get(ItemIds::RED_GLAZED_TERRACOTTA)->setCustomName("§r§c§lMONSTER")->setLore(["§r§eCurrent Level: §a".$this->plugin->abilitydata->get($player->getName())["monster-level"]."\n§cThis ability gives you strength after\n§cevery kill."]));
+
+		$menu->setListener(function(InvMenuTransaction $transaction) : InvMenuTransactionResult{
+			$player = $transaction->getPlayer();
+			$itemClicked = $transaction->getItemClicked();
+			switch($itemClicked->getCustomName()) {
+				case "§r§c§lMONSTER":
+					$this->plugin::getPerkShopManager()->buyPerk($player, "monster");
+					$transaction->getPlayer()->removeWindow($transaction->getAction()->getInventory());
+					break;
+			}
+			return $transaction->discard();
+		});
+		$menu->send($player, "Perks Menu");
+	}
 }

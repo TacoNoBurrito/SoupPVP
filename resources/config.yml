@@ -1,2 +1,6 @@
 #If You Want Players To Only Connect From Proxy
 proxy-only: false
+#If you want a reach-anticheat in the first place
+ac-enabled: false
+reach-warn: 4.5
+reach-ban: 8

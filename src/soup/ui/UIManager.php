@@ -22,7 +22,8 @@ class UIManager {
 				}
 				break;
 			case "perks":
-
+				$file = new InventoryUIs($this->plugin);
+				$file->openPerkShop($player);
 				break;
 			case "stats":
 

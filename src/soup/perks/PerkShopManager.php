@@ -28,6 +28,10 @@ class PerkShopManager {
 					}
 				} else {
 					if ($this->plugin->playerdata->get($player->getName())["credits"] >= $upgradePrice) {
+						if ($this->plugin->abilitydata->get($player->getName())["monster-level"] >= 10) {
+							$player->sendMessage("§cThis Ability Is At Its Highest Level");
+							return;
+						}
 						$this->plugin->playerdata->setNested($player->getName().".credits", $this->plugin->playerdata->get($player->getName())["credits"] - $upgradePrice);
 						$this->plugin->playerdata->save();
 						$this->plugin->abilitydata->setNested($player->getName() . ".monster-level", $this->plugin->abilitydata->get($player->getName())["monster-level"]+1);
